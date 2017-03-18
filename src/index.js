@@ -10,6 +10,8 @@ var EthTx = require("ethereumjs-tx");
 var BigNumber = require("bignumber.js");
 var keccak_256 = require("js-sha3").keccak_256;
 var abi = require("augur-abi");
+var BlockStream = require("./block-management/block-stream.js");
+var createBlockStreamTransportAdapter = require("./block-management/ethrpc-transport-adapter.js");
 var errors = require("./errors.json");
 var ErrorWithData = require("./errors.js").ErrorWithData;
 var ErrorWithCodeAndData = require("./errors.js").ErrorWithCodeAndData;
@@ -149,7 +151,9 @@ module.exports = {
       // ensure we can do basic JSON-RPC over this connection
       this.version(function (errorOrResult) {
         if (errorOrResult instanceof Error || errorOrResult.error) return initialConnectCallback(errorOrResult);
-        this.setupBlockSubscription(function () { initialConnectCallback(null); });
+        this.blockStream = new BlockStream(createBlockStreamTransportAdapter(this), this.BLOCK_POLL_INTERVAL);
+        this.blockStream.subscribe(this.onNewBlock.bind(this));
+        initialConnectCallback(null);
       }.bind(this));
     }.bind(this));
   },
@@ -188,6 +192,7 @@ module.exports = {
 
     // reset public state
     this.block = null;
+    this.blockStream = null;
     this.excludedFromTxRelay = {};
     this.gasPrice = 20000000000;
     this.notifications = {};
@@ -286,35 +291,6 @@ module.exports = {
       errorHandler();
     } else {
       this.configuration.errorHandler(new ErrorWithData("Received an invalid JSON-RPC message.", jso));
-    }
-  },
-
-  /**
-   * Used internally.  Setup the initial subscription for new blocks.  Called on first connect, then never again.
-   * 
-   * @param {function():void} callback - called when the subscription is done being setup
-   */
-  setupBlockSubscription: function (callback) {
-    if (!callback) {
-      // sync: we know subscriptions aren't supported, so just skip to setting up the polling
-      clearInterval(this.internalState.newBlockIntervalTimeoutId);
-      this.internalState.newBlockIntervalTimeoutId = setInterval(this.getBlockByNumber.bind(this, "latest", false, this.onNewBlock.bind(this)), this.BLOCK_POLL_INTERVAL);
-    } else {
-      // async: try to subscribe first, if that fails fallback to polling
-      var subscribeToNewBlocks = function(callback) {
-        clearInterval(this.internalState.newBlockIntervalTimeoutId);
-        this.subscribeNewHeads(function (resultOrError) {
-          if (resultOrError instanceof Error || resultOrError.error) {
-            this.internalState.newBlockIntervalTimeoutId = setInterval(this.getBlockByNumber.bind(this, "latest", false, this.onNewBlock.bind(this)), this.BLOCK_POLL_INTERVAL);
-          } else {
-            this.internalState.subscriptions[resultOrError] = this.onNewBlock.bind(this);
-          }
-          callback();
-        }.bind(this));
-      }.bind(this);
-
-      this.internalState.transporter.addReconnectListener(subscribeToNewBlocks.bind(this, function () {}));
-      subscribeToNewBlocks(callback);
     }
   },
 

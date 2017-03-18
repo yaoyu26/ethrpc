@@ -127,7 +127,7 @@ function MockTransport(noSubscriptionSupport) {
   }.bind(this);
 
   this.unsubscribeFromNewHeads = function (token) {
-    delete newHeadsCallbacks[token];    
+    delete newHeadsCallbacks[token];
   }.bind(this);
 
   this.simulateReconnect = function () {

@@ -45,7 +45,7 @@
     "coveralls": "^2.11.4",
     "del": "^1.2.1",
     "ethereumjs-abi": "0.6.4",
-    "ethereumjs-stub-rpc-server": "1.0.0",
+    "ethereumjs-stub-rpc-server": "2.0.5",
     "geth": "^0.1.4",
     "gulp": "^3.9.0",
     "gulp-uglify": "^1.5.1",
