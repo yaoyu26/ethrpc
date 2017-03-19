@@ -1,6 +1,6 @@
 "use strict";
 
-var Notifier = require("./notifier.js");
+var Notifier = require("../utilities/notifier.js");
 var validateBlock = require("./validate-block.js");
 
 function PollingBlockNotifier(transport, pollingIntervalMilliseconds) {
